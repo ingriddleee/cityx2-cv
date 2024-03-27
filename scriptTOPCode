@@ -1,0 +1,56 @@
+# me - this DAT
+# scriptOp - the OP which is cooking
+
+import cv2
+import numpy as np
+import time
+
+# press 'Setup Parameters' in the OP to call this function to re-create the parameters.
+def onSetupParameters(scriptOp):
+	page = scriptOp.appendCustomPage('YOLO Config')
+	page.appendStr('Configpath', label='YOLO Config Path')
+	page.appendStr('Weightspath', label='YOLO Weights Path')
+	page.appendStr('Classespath', label='Classes File Path')
+	page.appendPulse('Loadmodel', label='Load YOLO Model')
+	print('im setting up')
+	return
+
+def onLoadModel(par):
+    # Load the YOLO model and store it in parent's storage
+	baseOp = op('script4') 
+	
+	cfg_path = baseOp.par.Configpath.eval()
+	weights_path = baseOp.par.Weightspath.eval()
+	classes_path = baseOp.par.Classespath.eval()
+
+	net = cv2.dnn.readNet(cfg_path, weights_path)
+	with open(classes_path, "r") as f:
+		classes = [line.strip() for line in f.readlines()]
+
+	baseOp.store('net', net)
+	baseOp.store('classes', classes)
+
+	print("YOLO Model Loaded")
+	return
+
+# called whenever custom pulse parameter is pushed
+def onPulse(par):
+	if par.name == 'Loadmodel':
+		onLoadModel(par)
+	print('i load yolo model')
+	return
+
+
+def onCook(scriptOp):
+	# image = scriptOp.inputs[0].numpyArray(delayed=True, writable=True)
+	# image *= 255
+	# image = image.astype('uint8')
+	# scriptOp.copyNumpyArray(image)
+	img = op('null1').numpyArray(delayed=True)
+	gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+	gray = np.float32(gray)
+	dst = cv2.cornerHarris(gray, 2, 3, 0.04)
+	dst = cv2.dilate(dst, None)
+	img[dst>0.01*dst.max()]=[0,0,255, 255] #add 4th value as alpha. not in cv but in touch. 
+	scriptOp.copyNumpyArray(img)
+	return
