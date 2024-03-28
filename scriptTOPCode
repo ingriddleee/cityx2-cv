@@ -29,7 +29,13 @@ def onLoadModel(par):
 
 	baseOp.store('net', net)
 	baseOp.store('classes', classes)
-
+	#can remove - testing net
+	print(baseOp.fetch('net'))
+	if net is not None:
+		print("Network loaded successfully.")
+	else:
+	    print("Failed to load network.")
+	#----------end here ----------n.fetch('sales5', 0.0)
 	print("YOLO Model Loaded")
 	return
 
@@ -46,11 +52,80 @@ def onCook(scriptOp):
 	# image *= 255
 	# image = image.astype('uint8')
 	# scriptOp.copyNumpyArray(image)
+	#img = op('null1').numpyArray(delayed=True)
+	#gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+	#gray = np.float32(gray)
+	#dst = cv2.cornerHarris(gray, 2, 3, 0.04)
+	#dst = cv2.dilate(dst, None)
+	#img[dst>0.01*dst.max()]=[0,0,255, 255] #add 4th value as alpha. not in cv but in touch. 
+	#scriptOp.copyNumpyArray(img)
+	
+	#scriptOp.clear()  # Clear previous output
+	baseOp = op('script4') 
+	
+    # Fetching the YOLO network and classes from storage
+	net = baseOp.fetch('net', None)
+	classes = baseOp.fetch('classes', None)
+	colors = np.random.uniform(0, 255, size=(len(classes), 3))
+
+	if net is None or classes is None:
+		print("Error: YOLO model or classes not loaded.")
+		return
+	print(scriptOp)
+	#inputTOP = scriptOp.inputs[0]
+	#img = op('null1').numpyArray(delayed=True)
 	img = op('null1').numpyArray(delayed=True)
-	gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-	gray = np.float32(gray)
-	dst = cv2.cornerHarris(gray, 2, 3, 0.04)
-	dst = cv2.dilate(dst, None)
-	img[dst>0.01*dst.max()]=[0,0,255, 255] #add 4th value as alpha. not in cv but in touch. 
-	scriptOp.copyNumpyArray(img)
+	frame = np.array(img, dtype=np.uint8)
+
+    # Converting the input frame to BGR format for OpenCV
+	frame = cv2.cvtColor(frame[..., :3], cv2.COLOR_RGB2BGR)
+
+    # Preprocess frame for YOLO detection
+	blob = cv2.dnn.blobFromImage(frame, 0.00392, (320, 320), (0, 0, 0), swapRB=True, crop=False)
+	net.setInput(blob)
+
+	#layer_names = [net.getLayerNames()[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+	#layer_names = [net.getLayerNames()[i - 1] for i in net.getUnconnectedOutLayers().flatten()]
+	layer_indices = np.array(net.getUnconnectedOutLayers()).flatten() #1
+	layer_names = [net.getLayerNames()[i - 1] for i in layer_indices] #2 added by INGRID
+
+	outs = net.forward(layer_names)
+
+    # Post-processing
+	frame_height, frame_width = frame.shape[:2]
+	class_ids, confidences, boxes = [], [], []
+
+	for out in outs:
+		for detection in out:
+			scores = detection[5:]
+			class_id = np.argmax(scores)
+			confidence = scores[class_id]
+			if confidence > 0.3:
+				center_x, center_y = int(detection[0] * frame_width), int(detection[1] * frame_height)
+				w, h = int(detection[2] * frame_width), int(detection[3] * frame_height)
+
+				x, y = int(center_x - w / 2), int(center_y - h / 2)
+				boxes.append([x, y, w, h])
+				confidences.append(float(confidence))
+				class_ids.append(class_id)
+
+	indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
+	indexes = [i[0] if isinstance(i, tuple) else i for i in indexes] #added by INGRID
+
+	font = cv2.FONT_HERSHEY_PLAIN
+	for i in indexes: #indexes.flatten():
+		x, y, w, h = boxes[i]
+		label = str(classes[class_ids[i]])
+		confidence = confidences[i]
+		color = colors[class_ids[i]]
+		cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
+		cv2.putText(frame, f"{label} {round(confidence, 2)}", (x, y + 30), font, 2, (255, 255, 255), 2)
+
+	# Convert the frame back to RGB (TouchDesigner friendly format)
+	frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    # Add an alpha channel, set to 255 (fully opaque)
+	frame_with_alpha = np.concatenate([frame, np.full((*frame.shape[:2], 1), 255, dtype=np.uint8)], axis=-1)
+
+    # Update the Script TOP's output with the processed frame
+	scriptOp.copyNumpyArray(frame_with_alpha)
 	return
