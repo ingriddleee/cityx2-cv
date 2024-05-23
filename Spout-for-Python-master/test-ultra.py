@@ -26,6 +26,7 @@ def main():
 
             # Process frame with YOLO
             results = model(frame)
+            #print('Results:', results)
             annotated_frame = results[0].plot()
 
             # Send processed frame back or to another destination
