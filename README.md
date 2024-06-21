@@ -1,11 +1,27 @@
-### For Yolov8 Segmentation
-1. IN COMMAND PROMPT: Activate (pt37) `C:\Users\Admin\Desktop\sklar-repo\cityx2-cv\Spout-for-Python-master` make sure in this directory. This environment also uses pt37.
-    1. conda env list
-    2. conda activate pt37
-2. In VSCode, open Spout-For-Python-Master and use `cx2-0mq - intWSpout.toe` and `test-ultra-0mq-producer.py` (Successfully receive frame from TD and run Yolo/Ultralytics locally on it to detect), currently in progress is `test-ultra-0mq.py`. (extracting frames and sending it back). 
-3. Run `python test-ultra-0mq-producer.py` command in the COMMAND PROMPT (where I activated my conda env). Click X on Spout window to cleanly close program.
+# For Yolov8 Segmentation
 
-Make sure to pulse SetUp Parameters for Script1 and Import a Folder having complex_object. [If using Pickling]
+Here is how to run Touch and Spout integrated with Yolov8 Segmentation and Ultralytics. 
+
+
+# Download Libraries
+Make sure to have cv2, 0mq, ultralytics, zlib, and pickle downloaded.
+
+## Setting up Spout 
+
+Clone the `Spout-for-Python-master` folder and then with anaconda3, create a new anaconda venv with python version 3.7 (highest compatible version for Spout). 
+
+## Setting up Touch Designer
+
+Make sure to copy `complex_object.py` into a file called `_init_.py`and create a directory called `complex_object` in your local Python site packages. Import python and it's site packages into the Touch Designer Pyton 64-bit module path. 
+
+# Running the FIles
+
+1. Open the `cx2-0mq - intWSpout - customPlot - Composite.toe` file. 
+2. Pulse `SetUp` Parameters for the ScriptTOP.
+3. Open a command prompt and activate your anaconda venv with Python 3.7. 
+4. Switch into where you have `Spout-for-Python-master` folder cloned. 
+5. Run `python test-ultra-0mq-producer-customPlot.py` command in the COMMAND PROMPT where your anaconda venv is running. 
+6. Click `X` on the Spout program or run `Ctrl C` to cleanly exit the program. 
 
 
 #For yolov3 Work
